@@ -1,14 +1,15 @@
 from schemas import UserInDB, Token, UserLogin
 from models import User
 from passlib.context import CryptContext
-from fastapi import APIapp, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt
 import os
 from database import get_db
 from dotenv import load_dotenv 
-from fastapi import FastAPI
+from models import Base
+from database import engine
 
 
 load_dotenv()
@@ -20,6 +21,8 @@ CLIENT_ID=os.getenv("CLIENT_ID")
 
 app = FastAPI()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+Base.metadata.create_all(bind=engine)
 
 
 # ----- Helpers -----
@@ -54,6 +57,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
+
 @app.post("/register")
 def register(user: UserInDB, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -65,7 +69,6 @@ def register(user: UserInDB, db: Session = Depends(get_db)):
         lastname=user.lastname,
         email=user.email,
         password=hash_password(user.password),
-        role=user.role,
         created_at=datetime.utcnow(),
     )
     
