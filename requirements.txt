@@ -5,3 +5,8 @@ python-jose
 pydantic
 psycopg2-binary
  
+
+langchain 
+langchain-text-splitters 
+langchain-community 
+bs4
