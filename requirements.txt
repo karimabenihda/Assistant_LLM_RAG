@@ -12,3 +12,6 @@ langchain-community
 bs4
 pypdf
 
+langchain-huggingface
+langchain-core
+
