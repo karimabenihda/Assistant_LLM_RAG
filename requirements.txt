@@ -13,6 +13,7 @@ pypdf
 chromadb
 langchain-core
 
+langchain
 transformers==4.41.2
 huggingface-hub==0.35.1
 langchain-huggingface==1.2.0
