@@ -6,12 +6,13 @@ pydantic
 psycopg2-binary
  
 
-langchain 
+# langchain 
 langchain-text-splitters 
 langchain-community 
-bs4
 pypdf
-
-langchain-huggingface
+chromadb
 langchain-core
 
+transformers==4.41.2
+huggingface-hub==0.35.1
+langchain-huggingface==1.2.0
