@@ -5,7 +5,7 @@ python-jose
 pydantic
 psycopg2-binary
 passlib
-
+argon2_cffi
 # langchain 
 langchain-text-splitters 
 langchain-community 

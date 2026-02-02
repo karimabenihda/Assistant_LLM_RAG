@@ -4,19 +4,20 @@ from passlib.context import CryptContext
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from jose import jwt
+from jose import jwt,JWTError
 import os
 from database import get_db
 from dotenv import load_dotenv 
 from models import Base
 from database import engine
-
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_community.vectorstores import Chroma 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
 import os
 import numpy as np
 from sklearn.cluster import KMeans
@@ -25,32 +26,31 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 
 
-
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))  # convert to int
-CLIENT_ID=os.getenv("CLIENT_ID")
 
 app = FastAPI()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+
 
 Base.metadata.create_all(bind=engine)
 
 
 # ----- Helpers -----
-def hash_password(password: str):
-    return pwd_context.hash(password)
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
+def hash_password(password: str) -> str:
+    hashed = pwd_context.hash(password)
+    return hashed
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    result = pwd_context.verify(plain_password, hashed_password)
+    return result
+
 
 def create_access_token(data: dict, expires_delta: int = None):
     to_encode = data.copy()
@@ -102,14 +102,14 @@ llm = ChatGoogleGenerativeAI(
 
 from langchain_core.prompts import PromptTemplate
 
-prompt_template = """You are an expert assistant. Use the following context to answer the question. 
-If you can't find a direct answer, use the context to explain what you understand about the topic.
-Think step by step and provide a helpful answer based on the available information.
-
+prompt_template = """
+You are a helpful assistant. Use only the context below.
 Context: {context}
-
 Question: {question}
 
+Answer instructions:
+1. If the information is not in the context, say "I don't know."
+2. Do not describe the context if the answer is missing.
 Answer:"""
     
 PROMPT = PromptTemplate(
@@ -161,9 +161,17 @@ def register(user: UserInDB, db: Session = Depends(get_db)):
     
     return {"message": "User created successfully", "user_id": new_user.id}
 
+def verify_token(credentials:HTTPAuthorizationCredentials=Depends(security)  ):
+
+    try:
+        payload=jwt.decode(credentials.credentials,SECRET_KEY,  algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 @app.post("/query")
-def ask_rag(question:QuestionInDB):
+def ask_rag(question:QuestionInDB,user=Depends(verify_token)):
+    user_id = user.get("sub")
     result = qa_chain({"query":  question.qst})
-    return {result['result']}
+    return {"result": result['result'], "user_id": user_id} 
