@@ -32,6 +32,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))  # convert to int
 
+Gemini_API_Key=os.getenv('Gemini_API_Key')
+
 app = FastAPI()
 security = HTTPBearer()
 
@@ -92,8 +94,9 @@ vectorstore = Chroma.from_documents(
 )
 
 
-os.environ["Gemini_API_Key"] = "AIzaSyBN2SqI3sIDh51puadWeNXeFBzg0fJ4wEg"
-
+os.environ["Gemini_API_Key"] = Gemini_API_Key
+print(Gemini_API_Key)
+print(os.environ["Gemini_API_Key"])
 # Create Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -103,14 +106,26 @@ llm = ChatGoogleGenerativeAI(
 from langchain_core.prompts import PromptTemplate
 
 prompt_template = """
-You are a helpful assistant. Use only the context below.
-Context: {context}
-Question: {question}
+You are a factual assistant.
 
-Answer instructions:
-1. If the information is not in the context, say "I don't know."
-2. Do not describe the context if the answer is missing.
-Answer:"""
+You MUST answer the question using ONLY the information explicitly present in the context.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Rules:
+- If the answer is NOT fully contained in the context, reply exactly with: "I don't know."
+- Do NOT use prior knowledge.
+- Do NOT guess or infer.
+- Do NOT add explanations, assumptions, or extra details.
+- If the context is empty or irrelevant, say: "I don't know."
+
+Answer:
+"""
+
     
 PROMPT = PromptTemplate(
     template=prompt_template,
