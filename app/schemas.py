@@ -17,5 +17,14 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     
+class Qts(BaseModel):
+    qts:str
+    
 class QuestionInDB(BaseModel):
-        qst:str
+    userid: int
+    question: str
+    answer: str
+    cluster: int
+    latency_ms: int
+    created_at: datetime
+        

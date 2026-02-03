@@ -1,5 +1,5 @@
-from schemas import UserInDB, Token, UserLogin,QuestionInDB
-from models import User
+from schemas import UserInDB, Qts,Token, UserLogin,QuestionInDB
+from models import User,Query
 from passlib.context import CryptContext
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -95,8 +95,7 @@ vectorstore = Chroma.from_documents(
 
 
 os.environ["Gemini_API_Key"] = Gemini_API_Key
-print(Gemini_API_Key)
-print(os.environ["Gemini_API_Key"])
+
 # Create Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -186,7 +185,28 @@ def verify_token(credentials:HTTPAuthorizationCredentials=Depends(security)  ):
 
 
 @app.post("/query")
-def ask_rag(question:QuestionInDB,user=Depends(verify_token)):
+def ask_rag(qst_meta: QuestionInDB, extra_data: Qts,user=Depends(verify_token),db: Session = Depends(get_db)):
     user_id = user.get("sub")
-    result = qa_chain({"query":  question.qst})
-    return {"result": result['result'], "user_id": user_id} 
+    start_time = datetime.utcnow()
+    result = qa_chain({"query":  extra_data.qst})
+    answer=result.get('result')
+    end_time = datetime.utcnow()
+    latency = (end_time - start_time).total_seconds() * 1000
+    history=Query(
+            userid=user_id,
+            question=extra_data.qts,
+            answer=answer,
+            cluster=qst_meta.cluster,
+            latency_ms=latency,
+            created_at=datetime.utcnow()
+    )
+    db.add(history)
+    db.commit()
+    db.refresh(history)
+    
+    return {"result": answer, "user_id": user_id}
+    
+@app.get('/history')
+def get_user_history(user=Depends(verify_token), db: Session = Depends(get_db)):
+    user_id = user.get("sub")    
+    return db.query(Query).filter(Query.userid == user_id).all()
