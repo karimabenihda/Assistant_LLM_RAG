@@ -4,3 +4,4 @@ venv
 data
 chroma_db
 mlflow.db
+bot
