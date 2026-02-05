@@ -18,8 +18,8 @@ class Token(BaseModel):
     token_type: str
     
 class Qts(BaseModel):
-    qts:str
-    
+    qts: str
+
 class QuestionInDB(BaseModel):
     userid: int
     question: str
@@ -27,4 +27,8 @@ class QuestionInDB(BaseModel):
     cluster: int
     latency_ms: int
     created_at: datetime
-        
+
+# Ce modèle regroupe les deux pour la réponse finale
+class QueryFullResponse(BaseModel):
+    qst_meta: QuestionInDB
+    extra_data: Qts

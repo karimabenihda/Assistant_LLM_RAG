@@ -9,7 +9,7 @@ class RAGModel(mlflow.pyfunc.PythonModel):
             prompt_path=context.artifacts["prompt"]
         )
 
-    def predict(self, context, model_input):
+    def predict(self, model_input):
         question = model_input.iloc[0]["question"]
         result = self.qa_chain({"query": question})
         return result["result"]

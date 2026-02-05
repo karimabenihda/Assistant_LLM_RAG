@@ -32,3 +32,6 @@ with mlflow.start_run() as run:
         registered_model_name="RAG_Pipeline"
     )
     print(f"Modèle enregistré avec succès ! Run ID: {run.info.run_id}")
+    
+    
+    
