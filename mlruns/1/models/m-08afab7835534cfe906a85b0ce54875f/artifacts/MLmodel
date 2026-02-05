@@ -1,0 +1,26 @@
+artifact_path: file:///C:/Users/HP/Desktop/Assistant_LLM_RAG/mlruns/1/models/m-08afab7835534cfe906a85b0ce54875f/artifacts
+flavors:
+  python_function:
+    artifacts:
+      chroma_db:
+        path: artifacts\chroma_db
+        uri: C:\Users\HP\Desktop\Assistant_LLM_RAG\data\chroma_db
+      prompt:
+        path: artifacts\rag_prompt.txt
+        uri: C:\Users\HP\Desktop\Assistant_LLM_RAG\app\prompts\rag_prompt.txt
+    cloudpickle_version: 3.1.2
+    code: code
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pyfunc.model
+    python_model: python_model.pkl
+    python_version: 3.11.9
+    streamable: false
+mlflow_version: 3.9.0
+model_id: m-08afab7835534cfe906a85b0ce54875f
+model_size_bytes: 438404654
+model_uuid: m-08afab7835534cfe906a85b0ce54875f
+prompts: null
+run_id: 7277de825af94d259a48b23876b89f43
+utc_time_created: '2026-02-05 09:24:35.627066'

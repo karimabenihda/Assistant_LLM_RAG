@@ -53,10 +53,34 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # ----- Load MLflow RAG model from Registry -----
-# Make sure you have logged and registered your model as "RAG_Pipeline"
-rag_model = mlflow.pyfunc.load_model("models:/RAG_Pipeline/Production")
 
+# Make sure you have logged and registered your model as "RAG_Pipeline"
+import os
+import mlflow
+
+# 1. On récupère le chemin absolu proprement
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# On remonte d'un dossier pour sortir de 'app' et trouver 'models'
+ROOT_DIR = os.path.dirname(BASE_DIR)
+local_path = os.path.join(ROOT_DIR, "models", "rag_pyfunc")
+
+# 2. On transforme le chemin Windows en URI compatible MLflow (file:///C:/...)
+# On remplace les \ par des / et on ajoute le préfixe
+model_uri = f"file:///{local_path.replace(os.sep, '/')}"
+
+print(f"Tentative de chargement via : {model_uri}")
+
+try:
+    rag_model = mlflow.pyfunc.load_model(model_uri)
+    print("✅ Modèle chargé avec succès !")
+except Exception as e:
+    print(f"❌ Erreur de chargement : {e}")
+    rag_model = None
+    
+    
 # ----- Auth Endpoints -----
+
+
 @app.post("/login", response_model=Token)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
@@ -83,32 +107,51 @@ def register(user: UserInDB, db: Session = Depends(get_db)):
     return {"message": "User created successfully", "user_id": new_user.id}
 
 # ----- RAG Query Endpoint -----
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+run_id = "08afab7835534cfe906a85b0ce54875f"
+model_uri = f"runs:/{run_id}/rag_model"
+    # model_uri = "models:/RAG_Pipeline/latest" 
+    # rag_model = mlflow.pyfunc.load_model(model_uri)
+    # rag_model = mlflow.pyfunc.load_model("models:/RAG_Pipeline/1")
+try:
+    rag_model = mlflow.pyfunc.load_model(model_uri)
+    print("Succès : Modèle chargé via Run ID")
+except Exception as e:
+    print(f"Erreur chargement modèle: {e}")
+    rag_model = None
+
 @app.post("/query")
 def ask_rag(qst_meta: QuestionInDB, extra_data: Qts, user=Depends(verify_token), db: Session = Depends(get_db)):
+    if rag_model is None:
+        raise HTTPException(status_code=503, detail="Modèle non chargé")
+
     user_id = user.get("sub")
     start_time = datetime.utcnow()
 
-    # Convert question to DataFrame
-    question_df = pd.DataFrame([{"question": extra_data.qst}])
+    # Préparation de l'input pour MLflow (DataFrame)
+    question_df = pd.DataFrame([{"question": extra_data.qts}]) # Utilise le bon champ (qts)
     
-    # Get answer from RAG PyFunc model
-    answer = rag_model.predict(question_df)
+    try:
+        # MLflow predict retourne souvent un array ou une liste
+        answer = rag_model.predict(question_df)
+        if isinstance(answer, list) or hasattr(answer, "tolist"):
+            answer = answer[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur prédiction: {str(e)}")
 
-    end_time = datetime.utcnow()
-    latency = (end_time - start_time).total_seconds() * 1000  # in ms
+    latency = (datetime.utcnow() - start_time).total_seconds() * 1000
 
-    # Save query history
+    # Sauvegarde
     history = Query(
         userid=user_id,
         question=extra_data.qts,
-        answer=answer,
+        answer=str(answer),
         cluster=qst_meta.cluster,
         latency_ms=latency,
         created_at=datetime.utcnow()
     )
     db.add(history)
     db.commit()
-    db.refresh(history)
 
     return {"result": answer, "user_id": user_id, "latency_ms": latency}
 
