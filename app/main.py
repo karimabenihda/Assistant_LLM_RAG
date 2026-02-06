@@ -142,7 +142,7 @@ class RAGModel(mlflow.pyfunc.PythonModel):
         return result.get("result", "I don't know.")
 
 # Save RAG PyFunc
-# model_path = "../models/rag_pyfunc"
+model_path = "../models/rag_pyfunc"
 # mlflow.pyfunc.save_model(path=model_path, python_model=RAGModel(qa_chain))
 # print(f"RAG pipeline saved to {model_path}")
 
