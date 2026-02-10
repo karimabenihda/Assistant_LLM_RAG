@@ -6,7 +6,7 @@ pydantic
 psycopg2-binary
 passlib
 argon2_cffi
-# langchain 
+langchain 
 langchain-text-splitters 
 langchain-community 
 pypdf
@@ -18,3 +18,5 @@ transformers==4.41.2
 huggingface-hub==0.35.1
 langchain-huggingface==1.2.0
 mlflow
+langchain-google-genai
+sentence_transformers

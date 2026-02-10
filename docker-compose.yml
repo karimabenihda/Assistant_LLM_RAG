@@ -28,7 +28,8 @@ services:
       - DATABASE_URL=postgresql://postgres:root@db:5432/Assistant
     volumes:
       - .:/app
-      - ./mlruns:/mlruns
+      - ./data:/app/data
+
     restart: always
 
 volumes:

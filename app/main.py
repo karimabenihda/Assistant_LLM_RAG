@@ -1,12 +1,12 @@
-from schemas import UserInDB, Qts, Token, UserLogin, QuestionInDB
-from models import User, Query
+from app.schemas import UserInDB, Qts, Token, UserLogin, QuestionInDB
+from app.models import User, Query
 from passlib.context import CryptContext
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 import os
-from database import get_db, engine
+from app.database import get_db, engine
 from dotenv import load_dotenv
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -19,6 +19,7 @@ from sklearn.cluster import KMeans
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 import mlflow.pyfunc
+from app.models import Base
 
 # Load env
 load_dotenv()
@@ -33,7 +34,6 @@ app = FastAPI()
 security = HTTPBearer()
 
 # Create tables
-from models import Base
 Base.metadata.create_all(bind=engine)
 
 # ----- Helpers -----
@@ -53,7 +53,7 @@ def create_access_token(data: dict, expires_delta: int = None):
 
 # ----- RAG setup -----
 # Load documents
-loader = PyPDFLoader("../data/data.pdf")
+loader = PyPDFLoader("/app/data/data.pdf")
 documents = loader.load()
 
 text_splitter = RecursiveCharacterTextSplitter(
@@ -74,7 +74,7 @@ kmeans = KMeans(n_clusters=4, random_state=0, n_init="auto")
 clusters = kmeans.fit_predict(embedding_vectors)
 
 # Persist vectorstore
-persist_dir = "../data/chroma_db"
+persist_dir = "/app/data/chroma_db"
 vectorstore = Chroma.from_documents(
     documents=chunks,
     embedding=embeddings,
